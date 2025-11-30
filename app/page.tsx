@@ -1,65 +1,150 @@
-import Image from "next/image";
+'use client';
+
+import { useState } from 'react';
+import { VideoUpload } from '@/components/video-upload';
+import { LanguageSelector } from '@/components/language-selector';
+import { TranslationResult } from '@/components/translation-result';
+import { Button } from '@/components/ui/button';
+import { Sparkles } from 'lucide-react';
 
 export default function Home() {
+  const [file, setFile] = useState<File | null>(null);
+  const [videoUrl, setVideoUrl] = useState('');
+  const [targetLang, setTargetLang] = useState('');
+  const [status, setStatus] = useState<'idle' | 'uploading' | 'processing' | 'completed' | 'error'>('idle');
+  const [progress, setProgress] = useState(0);
+  const [result, setResult] = useState<string | undefined>(undefined);
+  const [videoResult, setVideoResult] = useState<string | undefined>(undefined);
+
+  const handleTranslate = async () => {
+    if ((!file && !videoUrl) || !targetLang) return;
+
+    setStatus('uploading');
+    setProgress(0);
+
+    const formData = new FormData();
+    if (file) {
+      formData.append('file', file);
+    } else if (videoUrl) {
+      formData.append('videoUrl', videoUrl);
+    }
+    formData.append('targetLanguage', targetLang);
+
+    try {
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Translation failed');
+      }
+
+      const data = await response.json();
+      setResult(data.result);
+      setVideoResult(data.videoUrl);
+      setStatus('completed');
+    } catch (error) {
+      console.error(error);
+      setStatus('error');
+    } finally {
+      setProgress(100);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center mb-12 space-y-4">
+          <div className="inline-flex items-center justify-center p-2 rounded-full bg-primary/10 text-primary mb-4">
+            <Sparkles className="w-5 h-5 mr-2" />
+            <span className="text-sm font-medium">AI-Powered Video Translation</span>
+          </div>
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
+            Translate Your Videos
+            <br />
+            <span className="text-foreground">In Seconds</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Upload your video, choose a language, and let Gemini AI handle the rest.
+            Get accurate subtitles and translations instantly.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold">1. Upload Video</h2>
+                <p className="text-sm text-muted-foreground">Select the video you want to translate.</p>
+              </div>
+              <VideoUpload
+                onFileSelect={(f) => {
+                  setFile(f);
+                  setVideoUrl(''); // Clear URL if file selected
+                  setResult(undefined);
+                  setVideoResult(undefined);
+                  setStatus('idle');
+                }}
+                onUrlChange={(url) => {
+                  setVideoUrl(url);
+                  setFile(null); // Clear file if URL entered
+                  setResult(undefined);
+                  setVideoResult(undefined);
+                  setStatus('idle');
+                }}
+              />
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold">2. Select Language</h2>
+                <p className="text-sm text-muted-foreground">Choose your target language.</p>
+              </div>
+              <div className="p-6 rounded-xl border bg-card text-card-foreground shadow-sm">
+                <LanguageSelector
+                  label="Target Language"
+                  value={targetLang}
+                  onChange={setTargetLang}
+                  placeholder="Select target language"
+                />
+
+                <div className="mt-8">
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    disabled={(!file && !videoUrl) || !targetLang || status === 'uploading' || status === 'processing'}
+                    onClick={handleTranslate}
+                  >
+                    {status === 'processing' ? (
+                      <>Processing...</>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Start Translation
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <TranslationResult
+            status={status}
+            progress={progress}
+            result={result}
+            videoResult={videoResult}
+            onReset={() => {
+              setStatus('idle');
+              setFile(null);
+              setTargetLang('');
+              setResult(undefined);
+              setVideoResult(undefined);
+            }}
+          />
         </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
