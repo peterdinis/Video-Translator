@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 interface VideoUploadProps {
 	onFileSelect: (file: File | null) => void;
 	onUrlChange?: (url: string) => void;
+	currentFile?: File | null;
 }
 
 export function VideoUpload({ onFileSelect, onUrlChange }: VideoUploadProps) {

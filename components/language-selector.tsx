@@ -14,6 +14,7 @@ interface LanguageSelectorProps {
 	value: string;
 	onChange: (value: string) => void;
 	placeholder?: string;
+	disabled?: boolean;
 }
 
 const LANGUAGES = [
